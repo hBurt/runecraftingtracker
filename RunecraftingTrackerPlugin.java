@@ -24,16 +24,29 @@
  */
 package net.runelite.client.plugins.runecraftingtracker;
 
-import com.google.inject.Provides;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
+import net.runelite.api.ChatMessageType;
+import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.InventoryID;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.client.config.ConfigManager;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -49,29 +62,31 @@ public class RunecraftingTrackerPlugin extends Plugin
 {
 	private static final String CRAFTED_NOTIFICATION_MESSAGE = "You bind the temple's power into runes.";
 
+	RunecraftingTrackerPanel uiPanel;
+
+	int[] runeIDs = {556, 558, 555, 557, 554, 559, 564, 562, 9075, 561, 563, 560, 565, 566, 21880};
+
+	private NavigationButton uiNavigationButton;
+	private LinkedList<PanelItemData> runeTracker = new LinkedList<>();
+	private Multiset<Integer> inventorySnapshot;
+
 	@Inject
 	private ClientToolbar clientToolbar;
 
-	private NavigationButton uiNavigationButton;
+	@Inject
+	private Client client;
 
-	private LinkedHashMap<String, Integer> runeTracker = new LinkedHashMap<>();
+	@Inject
+	private ClientThread clientThread;
 
-	@Provides
-	RunecraftingTrackerConfig getConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(RunecraftingTrackerConfig.class);
-	}
+	@Inject
+	private ItemManager manager;
 
 	@Override
 	protected void startUp() throws Exception
 	{
-		for (int i = 0; i < Runes.values().length; i++)
-		{
-			runeTracker.put(Runes.values()[i].name(), 0);
-		}
-
 		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "/runecraftingtracker/icon.png");
-		final RunecraftingTrackerPanel uiPanel = new RunecraftingTrackerPanel(runeTracker);
+		uiPanel = new RunecraftingTrackerPanel(runeTracker);
 
 		uiNavigationButton = NavigationButton.builder()
 			.tooltip(getName())
@@ -89,16 +104,116 @@ public class RunecraftingTrackerPlugin extends Plugin
 		clientToolbar.removeNavigation(uiNavigationButton);
 	}
 
-	@Subscribe
-	public void onChatMessage(ChatMessage event)
+	private void init()
 	{
-		if (event.getMessage().contains(CRAFTED_NOTIFICATION_MESSAGE))
+		for (int i = 0; i < Runes.values().length; i++)
 		{
-
+			runeTracker.add(new PanelItemData(
+				Runes.values()[i].name(),
+				runeIDs[i],
+				false,
+				0,
+				manager.getItemPrice(runeIDs[i])));
 		}
 	}
 
-	protected LinkedHashMap<String, Integer> getRuneTracker()
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOGIN_SCREEN)
+		{
+			clientThread.invokeLater(this::init);
+		}
+	}
+
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		if (event.getType() == ChatMessageType.SPAM || event.getType() == ChatMessageType.GAMEMESSAGE)
+		{
+			if (event.getMessage().contains(CRAFTED_NOTIFICATION_MESSAGE))
+			{
+				takeInventorySnapshot();
+			}
+		}
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (event.getContainerId() != InventoryID.INVENTORY.getId())
+		{
+			return;
+		}
+
+		processChange(event.getItemContainer());
+	}
+
+	private void processChange(ItemContainer current)
+	{
+		if (inventorySnapshot != null)
+		{
+			Multiset<Integer> currentInventory = HashMultiset.create();
+			Arrays.stream(current.getItems())
+				.forEach(item -> currentInventory.add(item.getId(), item.getQuantity()));
+
+			final Multiset<Integer> diff = Multisets.difference(currentInventory, inventorySnapshot);
+
+			List<ItemStack> items = diff.entrySet().stream()
+				.map(e -> new ItemStack(e.getElement(), e.getCount(), client.getLocalPlayer().getLocalLocation()))
+				.collect(Collectors.toList());
+
+			LinkedList<PanelItemData> panels = uiPanel.getRuneTracker();
+
+			for (ItemStack stack : items)
+			{
+				for (PanelItemData item : panels)
+				{
+					if (!item.isVisible())
+					{
+						if (item.getId() == stack.getId())
+						{
+							item.setVisible(true);
+							item.setCrafted(item.getCrafted() + stack.getQuantity());
+						}
+					}
+					else
+					{
+						if (item.getId() == stack.getId())
+						{
+							item.setCrafted(item.getCrafted() + stack.getQuantity());
+						}
+					}
+				}
+
+				System.out.println(stack.getId() + ": " + stack.getQuantity());
+			}
+			inventorySnapshot = null;
+			try
+			{
+				SwingUtilities.invokeAndWait(uiPanel::pack);
+			}
+			catch (InterruptedException | InvocationTargetException e)
+			{
+				e.printStackTrace();
+			}
+
+			uiPanel.refresh();
+		}
+	}
+
+	private void takeInventorySnapshot()
+	{
+		final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+		if (itemContainer != null)
+		{
+			inventorySnapshot = HashMultiset.create();
+			Arrays.stream(itemContainer.getItems())
+				.forEach(item -> inventorySnapshot.add(item.getId(), item.getQuantity()));
+		}
+	}
+
+	protected LinkedList<PanelItemData> getRuneTracker()
 	{
 		return runeTracker;
 	}

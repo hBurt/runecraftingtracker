@@ -24,8 +24,88 @@
  */
 package net.runelite.client.plugins.runecraftingtracker;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.PluginErrorPanel;
+import net.runelite.client.util.ImageUtil;
 
 public class RunecraftingTrackerPanel extends PluginPanel
 {
+	// When there is nothing tracked, display this
+	private final PluginErrorPanel errorPanel = new PluginErrorPanel();
+
+	private JPanel container;
+
+	RunecraftingTrackerPanel(final RunecraftingTrackerPlugin plugin)
+	{
+		super();
+		setBorder(new EmptyBorder(5, 5, 5, 5));
+		setBackground(ColorScheme.DARK_GRAY_COLOR);
+		setLayout(new BorderLayout());
+
+		container = new JPanel();
+		container.setBorder(new EmptyBorder(10, 0, 0, 0));
+		container.setLayout(new GridLayout(0, 1, 0, 10));
+
+		container.add(panelItem(
+			new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
+				"/runecraftingtracker/Air_rune.png")),
+			"257",
+			"32,889 gp")
+		);
+
+		add(container, BorderLayout.CENTER);
+
+
+		// Error panel
+		//errorPanel.setContent("Runecrafting Tracker", "You have not crafted any runes yet.");
+		//add(errorPanel);
+
+	}
+
+	private JPanel panelItem(ImageIcon icon, String textTop_crafted, String textBottom_profit)
+	{
+		JPanel container = new JPanel();
+		container.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		container.setLayout(new BorderLayout());
+		container.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+		JLabel iconLabel = new JLabel(icon);
+		container.add(iconLabel, BorderLayout.WEST);
+
+		JPanel textContainer = new JPanel();
+		textContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		textContainer.setLayout(new GridLayout(2, 1));
+		textContainer.setBorder(new EmptyBorder(5, 10, 5, 10));
+
+		JLabel topLine = new JLabel("crafted: " + textTop_crafted);
+		topLine.setForeground(Color.WHITE);
+		topLine.setFont(FontManager.getRunescapeSmallFont());
+
+		JLabel bottomLine = new JLabel("profit: " + textBottom_profit);
+		bottomLine.setForeground(Color.WHITE);
+		bottomLine.setFont(FontManager.getRunescapeSmallFont());
+
+		textContainer.add(topLine);
+		textContainer.add(bottomLine);
+
+		container.add(textContainer, BorderLayout.CENTER);
+
+		return container;
+	}
+
 }

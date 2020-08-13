@@ -26,16 +26,11 @@ package net.runelite.client.plugins.runecraftingtracker;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
+import java.util.Map;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -48,28 +43,31 @@ public class RunecraftingTrackerPanel extends PluginPanel
 	// When there is nothing tracked, display this
 	private final PluginErrorPanel errorPanel = new PluginErrorPanel();
 
-	private JPanel container;
-
-	RunecraftingTrackerPanel(final RunecraftingTrackerPlugin plugin)
+	RunecraftingTrackerPanel(Map<String, Integer> runeTracker)
 	{
-		super();
-		setBorder(new EmptyBorder(5, 5, 5, 5));
+
+		setBorder(new EmptyBorder(1, 5, 5, 5));
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setLayout(new BorderLayout());
 
-		container = new JPanel();
+		JPanel container = new JPanel();
 		container.setBorder(new EmptyBorder(10, 0, 0, 0));
-		container.setLayout(new GridLayout(0, 1, 0, 10));
+		container.setLayout(new GridLayout(0, 1, 0, 2));
 
-		container.add(panelItem(
-			new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
-				"/runecraftingtracker/Air_rune.png")),
-			"257",
-			"32,889 gp")
-		);
+		if(runeTracker != null)
+		{
+			for (Map.Entry<String, Integer> entry : runeTracker.entrySet())
+			{
+				container.add(panelItem(
+					new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
+						"/runecraftingtracker/" + entry.getKey() + ".png")),
+					"0",
+					"0")
+				);
+			}
+		}
 
 		add(container, BorderLayout.CENTER);
-
 
 		// Error panel
 		//errorPanel.setContent("Runecrafting Tracker", "You have not crafted any runes yet.");
@@ -82,7 +80,7 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		JPanel container = new JPanel();
 		container.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		container.setLayout(new BorderLayout());
-		container.setBorder(new EmptyBorder(10, 10, 10, 10));
+		container.setBorder(new EmptyBorder(2, 10, 2, 10));
 
 		JLabel iconLabel = new JLabel(icon);
 		container.add(iconLabel, BorderLayout.WEST);
@@ -107,5 +105,7 @@ public class RunecraftingTrackerPanel extends PluginPanel
 
 		return container;
 	}
+
+
 
 }

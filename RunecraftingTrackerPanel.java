@@ -58,12 +58,10 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		container.setBorder(new EmptyBorder(10, 0, 0, 0));
 		container.setLayout(new GridLayout(0, 1, 0, 2));
 
-
 		container.add(panelItem(
 			new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
 				"/runecraftingtracker/COIN.png")),
 			null));
-
 
 		add(container, BorderLayout.CENTER);
 
@@ -72,7 +70,6 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		//add(errorPanel);
 
 		pack();
-
 	}
 
 	protected void pack()
@@ -103,12 +100,10 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		});
 	}
 
-
 	protected void refresh()
 	{
 		revalidate();
 	}
-
 
 	protected LinkedList<PanelItemData> getRuneTracker()
 	{

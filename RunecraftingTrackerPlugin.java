@@ -26,17 +26,16 @@ package net.runelite.client.plugins.runecraftingtracker;
 
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import javax.inject.Inject;
-import net.runelite.api.Client;
-import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SkillIconManager;
-import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.plugins.runenergy.RunEnergyConfig;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
@@ -55,6 +54,8 @@ public class RunecraftingTrackerPlugin extends Plugin
 
 	private NavigationButton uiNavigationButton;
 
+	private LinkedHashMap<String, Integer> runeTracker = new LinkedHashMap<>();
+
 	@Provides
 	RunecraftingTrackerConfig getConfig(ConfigManager configManager)
 	{
@@ -64,8 +65,13 @@ public class RunecraftingTrackerPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
+		for (int i = 0; i < Runes.values().length; i++)
+		{
+			runeTracker.put(Runes.values()[i].name(), 0);
+		}
+
 		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "/runecraftingtracker/icon.png");
-		final RunecraftingTrackerPanel uiPanel = new RunecraftingTrackerPanel(this);
+		final RunecraftingTrackerPanel uiPanel = new RunecraftingTrackerPanel(runeTracker);
 
 		uiNavigationButton = NavigationButton.builder()
 			.tooltip(getName())
@@ -82,4 +88,21 @@ public class RunecraftingTrackerPlugin extends Plugin
 	{
 		clientToolbar.removeNavigation(uiNavigationButton);
 	}
+
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		if (event.getMessage().contains(CRAFTED_NOTIFICATION_MESSAGE))
+		{
+
+		}
+	}
+
+	protected LinkedHashMap<String, Integer> getRuneTracker()
+	{
+		return runeTracker;
+	}
+
+	enum Runes
+	{AIR, MIND, WATER, EARTH, FIRE, BODY, COSMIC, CHAOS, ASTRAL, NATURE, LAW, DEATH, BLOOD, SOUL, WRAITH}
 }

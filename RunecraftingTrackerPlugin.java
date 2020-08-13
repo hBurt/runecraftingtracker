@@ -24,17 +24,62 @@
  */
 package net.runelite.client.plugins.runecraftingtracker;
 
+import com.google.inject.Provides;
+import java.awt.image.BufferedImage;
+import javax.inject.Inject;
+import net.runelite.api.Client;
+import net.runelite.api.events.GameTick;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SkillIconManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.runenergy.RunEnergyConfig;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
 
 @PluginDescriptor(
 	name = "Runecrafting Tracker",
 	description = "Track the amount of runes you have crafted",
-	tags = {"rc", "rune", "craft", "runecraft", "runecrafting", "track", "tracker", "zmi", "ourania", "altar", }
+	tags = {"rc", "rune", "craft", "runecraft", "runecrafting", "track", "tracker", "zmi", "ourania", "altar",}
 )
 public class RunecraftingTrackerPlugin extends Plugin
 {
 	private static final String CRAFTED_NOTIFICATION_MESSAGE = "You bind the temple's power into runes.";
 
+	@Inject
+	private ClientToolbar clientToolbar;
 
+	private NavigationButton uiNavigationButton;
+
+	@Provides
+	RunecraftingTrackerConfig getConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(RunecraftingTrackerConfig.class);
+	}
+
+	@Override
+	protected void startUp() throws Exception
+	{
+		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "/runecraftingtracker/icon.png");
+		final RunecraftingTrackerPanel uiPanel = new RunecraftingTrackerPanel(this);
+
+		uiNavigationButton = NavigationButton.builder()
+			.tooltip(getName())
+			.icon(icon)
+			.priority(10)
+			.panel(uiPanel)
+			.build();
+
+		clientToolbar.addNavigation(uiNavigationButton);
+	}
+
+	@Override
+	protected void shutDown() throws Exception
+	{
+		clientToolbar.removeNavigation(uiNavigationButton);
+	}
 }

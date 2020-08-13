@@ -27,7 +27,8 @@ package net.runelite.client.plugins.runecraftingtracker;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -42,30 +43,27 @@ public class RunecraftingTrackerPanel extends PluginPanel
 {
 	// When there is nothing tracked, display this
 	private final PluginErrorPanel errorPanel = new PluginErrorPanel();
+	private JPanel container;
+	private LinkedList<PanelItemData> runeTracker;
 
-	RunecraftingTrackerPanel(Map<String, Integer> runeTracker)
+	RunecraftingTrackerPanel(LinkedList<PanelItemData> runeTracker)
 	{
 
+		this.runeTracker = runeTracker;
 		setBorder(new EmptyBorder(1, 5, 5, 5));
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 		setLayout(new BorderLayout());
 
-		JPanel container = new JPanel();
+		container = new JPanel();
 		container.setBorder(new EmptyBorder(10, 0, 0, 0));
 		container.setLayout(new GridLayout(0, 1, 0, 2));
 
-		if(runeTracker != null)
-		{
-			for (Map.Entry<String, Integer> entry : runeTracker.entrySet())
-			{
-				container.add(panelItem(
-					new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
-						"/runecraftingtracker/" + entry.getKey() + ".png")),
-					"0",
-					"0")
-				);
-			}
-		}
+
+		container.add(panelItem(
+			new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
+				"/runecraftingtracker/COIN.png")),
+			null));
+
 
 		add(container, BorderLayout.CENTER);
 
@@ -73,9 +71,51 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		//errorPanel.setContent("Runecrafting Tracker", "You have not crafted any runes yet.");
 		//add(errorPanel);
 
+		pack();
+
 	}
 
-	private JPanel panelItem(ImageIcon icon, String textTop_crafted, String textBottom_profit)
+	protected void pack()
+	{
+		container.removeAll();
+
+		AtomicInteger totalProfit = new AtomicInteger(0);
+
+		runeTracker.forEach((temp) -> {
+			totalProfit.addAndGet(temp.getCrafted() * temp.getCostPerRune());
+		});
+
+		container.add(panelItem(
+			new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
+				"/runecraftingtracker/COIN.png")),
+			totalProfit));
+
+		runeTracker.forEach((temp) -> {
+			if (temp.isVisible())
+			{
+				container.add(panelItem(
+					new ImageIcon(ImageUtil.getResourceStreamFromClass(RunecraftingTrackerPlugin.class,
+						"/runecraftingtracker/" + temp.getName() + ".png")),
+					temp.getCrafted(),
+					temp.getCrafted() * temp.getCostPerRune())
+				);
+			}
+		});
+	}
+
+
+	protected void refresh()
+	{
+		revalidate();
+	}
+
+
+	protected LinkedList<PanelItemData> getRuneTracker()
+	{
+		return runeTracker;
+	}
+
+	private JPanel panelItem(ImageIcon icon, int textTop_crafted, int textBottom_profit)
 	{
 		JPanel container = new JPanel();
 		container.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -106,6 +146,31 @@ public class RunecraftingTrackerPanel extends PluginPanel
 		return container;
 	}
 
+	private JPanel panelItem(ImageIcon icon, AtomicInteger textMiddle)
+	{
+		JPanel container = new JPanel();
+		container.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		container.setLayout(new BorderLayout());
+		container.setBorder(new EmptyBorder(2, 10, 2, 10));
+
+		JLabel iconLabel = new JLabel(icon);
+		container.add(iconLabel, BorderLayout.WEST);
+
+		JPanel textContainer = new JPanel();
+		textContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		textContainer.setLayout(new GridLayout(1, 1));
+		textContainer.setBorder(new EmptyBorder(5, 10, 5, 10));
+
+		JLabel middleLine = new JLabel("x " + textMiddle);
+		middleLine.setForeground(Color.WHITE);
+		middleLine.setFont(FontManager.getRunescapeSmallFont());
+
+		textContainer.add(middleLine);
+
+		container.add(textContainer, BorderLayout.CENTER);
+
+		return container;
+	}
 
 
 }
